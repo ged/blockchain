@@ -1,5 +1,7 @@
 # Blockchain Experiments
 
+http://repo.deveiate.org/Block-Chain
+
 This is just a playground for experimenting with blockchain programming. You probably shouldn't use it for anything.
 
 ## License

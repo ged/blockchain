@@ -6,7 +6,7 @@ rescue LoadError
 	abort "This Rakefile requires hoe (gem install hoe)"
 end
 
-GEMSPEC = 'block.gemspec'
+GEMSPEC = 'blockchain.gemspec'
 
 
 Hoe.plugin :mercurial
@@ -16,7 +16,7 @@ Hoe.plugin :deveiate
 Hoe.plugins.delete :rubyforge
 Hoe.plugins.delete :gemcutter # Remove for public gems
 
-hoespec = Hoe.spec 'block' do |spec|
+hoespec = Hoe.spec 'blockchain' do |spec|
 
 	spec.readme_file = 'README.md'
 	spec.history_file = 'History.md'
@@ -26,11 +26,14 @@ hoespec = Hoe.spec 'block' do |spec|
 
 	spec.developer 'Michael Granger', 'ged@FaerieMUD.org'
 
-	spec.dependency 'loggability', '~> 0.11'
+	spec.dependency 'loggability', '~> 0.14'
+	spec.dependency 'msgpack', '~> 1.2'
+	spec.dependency 'uuid', '~> 2.3'
 
-	spec.dependency 'hoe-deveiate',            '~> 0.3', :developer
-	spec.dependency 'simplecov',               '~> 0.7', :developer
-	spec.dependency 'rdoc-generator-fivefish', '~> 0.1', :developer
+	spec.dependency 'rdoc', '~> 6.0', :developer
+	spec.dependency 'hoe-deveiate', '~> 0.3', :developer
+	spec.dependency 'simplecov', '~> 0.7', :developer
+	spec.dependency 'rdoc-generator-fivefish', '~> 0.3', :developer
 
 	spec.require_ruby_version( '>=2.5.0' )
 	spec.hg_sign_tags = true if spec.respond_to?( :hg_sign_tags= )
@@ -65,11 +68,11 @@ if File.directory?( '.hg' )
 
 	Rake::Task[ 'docs' ].clear
 	RDoc::Task.new( 'docs' ) do |rdoc|
-	    rdoc.main = "README.rdoc"
+	    rdoc.main = "README.md"
 		rdoc.markup = 'markdown'
-	    rdoc.rdoc_files.include( "*.rdoc", "ChangeLog", "lib/**/*.rb" )
+	    rdoc.rdoc_files.include( "*.md", "ChangeLog", "lib/**/*.rb" )
 	    rdoc.generator = :fivefish
-		rdoc.title = 'Block'
+		rdoc.title = 'Blockchain'
 	    rdoc.rdoc_dir = 'doc'
 	end
 end
@@ -77,6 +80,7 @@ end
 task :gemspec => GEMSPEC
 file GEMSPEC => __FILE__
 task GEMSPEC do |task|
+	Rake.application.trace "(Re)generating gemspec at %s" % [ task.name ]
 	spec = $hoespec.spec
 	spec.files.delete( '.gemtest' )
 	spec.signing_key = nil
