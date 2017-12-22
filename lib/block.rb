@@ -11,5 +11,9 @@ module Block
 	REVISION = %q$Revision$
 
 
+	autoload :Chain, 'block/chain'
+	autoload :ProofOfWork, 'block/proof_of_work'
+
 end # module Block
+
 

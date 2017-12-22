@@ -1,46 +1,6 @@
-# Block
+# Blockchain Experiments
 
-home
-: http://deveiate.org/projects/Block
-
-code
-: http://bitbucket.org/ged/Block
-
-github
-: https://github.com/ged/block
-
-docs
-: http://deveiate.org/code/block
-
-
-## Description
-
-
-
-
-## Prerequisites
-
-* Ruby
-
-
-## Installation
-
-    $ gem install block
-
-
-## Contributing
-
-You can check out the current development source with Mercurial via its
-{project page}[http://bitbucket.org/ged/block]. Or if you prefer Git, via 
-{its Github mirror}[https://github.com/ged/block].
-
-After checking out the source, run:
-
-    $ rake newb
-
-This task will install any missing dependencies, run the tests/specs,
-and generate the API documentation.
-
+This is just a playground for experimenting with blockchain programming. You probably shouldn't use it for anything.
 
 ## License
 
