@@ -17,6 +17,7 @@ module Blockchain
 	log_as :blockchain
 
 
+	autoload :Block, 'blockchain/block'
 	autoload :Currency, 'blockchain/currency'
 	autoload :Ledger, 'blockchain/ledger'
 	autoload :ProofOfWork, 'blockchain/proof_of_work'

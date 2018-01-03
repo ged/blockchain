@@ -51,9 +51,7 @@ class Blockchain::Currency < Blockchain::Ledger
 
 	### Mine the current block on behalf of the specified +wallet+.
 	def process( wallet: )
-		proof = Blockchain::ProofOfWork.find( self.last_block.proof, self.last_block.previous_hash )
-
-		self.add_block( proof: proof ) do
+		self.add_block do
 			self.add_transaction( from: "0", to: wallet, amount: MINING_REWARD )
 		end
 	end
@@ -94,9 +92,8 @@ class Blockchain::Currency < Blockchain::Ledger
 
 	### Add the initial block onto the chain.
 	def add_genesis_block
-		self.add_block( proof: 111, previous_hash: 1 ) do
-			self.add_transaction( to: '0', from: '0', amount: INITIAL_AMOUNT )
-		end
+		self.add_transaction( to: '0', from: '0', amount: INITIAL_AMOUNT )
+		super
 	end
 
 

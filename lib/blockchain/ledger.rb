@@ -16,14 +16,16 @@ class Blockchain::Ledger
 	log_to :blockchain
 
 
-	# Chain block struct
-	Block = Struct.new( :index, :timestamp, :transactions, :proof, :previous_hash )
-
-
 	### Create a new ledger
-	def initialize
-		@chain  = []
+	def initialize( pow_strategy=Blockchain::ProofOfWork, block_type=Blockchain::Block )
+		@chain                = []
 		@current_transactions = []
+
+		@pow_strategy         = pow_strategy
+		@block_type           = block_type
+
+		self.log.debug "Created %p ledger with PoW strategy: %p" % [ block_type, pow_strategy ]
+		self.freeze
 
 		self.add_genesis_block
 	end
@@ -37,25 +39,22 @@ class Blockchain::Ledger
 	# Accumulated transactions for each block in the chain
 	attr_accessor :current_transactions
 
+	##
+	# The proof of work strategy object
+	attr_reader :pow_strategy
+	
+	##
+	# The type of Block to use
+	attr_reader :block_type
+	
 
-	### Append a new Blockchain to the chain with the specified +proof+ and
-	### +previous_hash+. If +previous_hash+ is +nil+, it will be automatically
-	### calculated using the previous block.
-	def add_block( proof:, previous_hash: nil )
-		self.log.debug "Adding a block with proof: %p" % [ proof ]
-
+	### Append a new Blockchain to the chain.
+	def add_block
 		yield if block_given?
 
-        block = Block.new(
-            self.chain.length + 1,
-            Time.now.to_f,
-            self.current_transactions,
-            proof,
-            previous_hash || self.hash_of_last_block,
-        )
+        block = self.last_block.create_next( *self.current_transactions )
 
-        # Reset the current list of transactions
-        self.current_transactions = []
+        self.current_transactions.clear
         self.chain.push( block )
 
 		self.log.debug "Added block %p with hash %p" % [ block.index, block.previous_hash ]
@@ -65,15 +64,19 @@ class Blockchain::Ledger
 
 	### Add the initial block onto the chain.
 	def add_genesis_block
-		self.add_block( proof: 111, previous_hash: 1 )
+		self.log.info "Adding genesis block."
+		self.chain << self.block_type.new( self.pow_strategy, self.current_transactions )
+		self.current_transactions.clear
+
+		return self.chain.last
 	end
 
 
 	### Add a transaction to the block that's currently being worked on.
 	def add_transaction( **attributes )
-		self.log.debug "Adding transaction %d to block %d" %
+		self.log.info "Adding transaction %d to block %d" %
 			[ self.current_transactions.length + 1, self.chain.length + 1 ]
-		self.current_transactions << attributes
+		self.current_transactions << attributes.transform_keys( &:to_s )
 	end
 
 
@@ -83,32 +86,17 @@ class Blockchain::Ledger
 	end
 
 
-	### Return the hash of the last block in the chain.
-	def hash_of_last_block
-		return hash( self.last_block )
-	end
-
-
 	### Check the chain for validity, returning +true+ if it's valid.
 	def valid?
-		return true unless self.chain.each_cons( 2 ).find do |last_block, block|
-			block.previous_hash != hash( last_block ) ||
-			!Blockchain::ProofOfWork.valid_proof?( last_block.proof, last_block.previous_hash, block.proof )
-		end
+		return self.invalid_blocks.empty?
 	end
 
 
-	#######
-	private
-	#######
-
-	### Calculate the cryptographic hash of the specified +block+, which must
-	### respond to #to_h.
-	def hash( block )
-		self.log.debug "hashing: %p" % [ block ]
-		encoded = MessagePack.pack( block.to_h.sort )
-		return Digest::SHA2.hexdigest( encoded )
+	### Return any blocks in the chain which invalidate it.
+	def invalid_blocks
+		return self.chain.reject( &:valid? )
 	end
+
 
 end # class Blockchain::Ledger
 
