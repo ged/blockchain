@@ -1,16 +1,64 @@
 #!/usr/bin/env ruby
 
-require 'bundler/setup'
-require 'blockchain'
+$LOAD_PATH.unshift( 'lib' )
+
+require 'loggability'
+require 'blockchain/currency'
+require 'tty/table'
+require 'pastel'
 
 
-coin = Blockchain::Coin.new
+def show_currency_state( ledger )
+	pastel = Pastel.new
 
-me = coin.create_wallet
-other = coin.create_wallet
+	puts pastel.bold.white( "Currency State" )
 
-coin.process( wallet: me )
+	puts pastel.yellow( "Chain" )
+	puts pastel.yellow(     " Idx   Time                                       Proof" )
+	ledger.each_block do |block|
+		puts "%05d  %s              %d" %
+			[ block.index, block.timestamp.strftime('%Y-%m-%d %H:%M:%S.%N'), block.proof ]
+			block.transactions.each do |tr|
+				amount = Money( tr[:amount] )
+				puts "    %15s  [%s → %s]" % [ amount.format, tr[:from], tr[:to] ]
+			end
+	end
 
-puts "Okay, set up. I now have %0.6fÇ after mining one block." % [ coin.balance_for( wallet: me) ]
+	puts
+	puts pastel.yellow( "Wallets" )
+	wallet_table = build_wallet_table( ledger )
+	puts wallet_table.render
+	
+	puts
+end
 
+
+def build_wallet_table( ledger )
+	table = TTY::Table.new( header: ['Wallet', 'Amount'] )
+	ledger.all_wallet_balances.each do |uuid, amount|
+		table << [ uuid, amount.format ]
+	end
+
+	return table
+end
+
+
+def main
+	Loggability.level = :debug
+
+	coin = Blockchain::Currency.new
+	me = coin.create_wallet
+	other = coin.create_wallet
+
+	coin.process( wallet: me )
+	coin.transfer( from: me, to: other, amount: 245 )
+	coin.transfer( from: other, to: me, amount: 20 )
+	coin.process( wallet: me )
+	show_currency_state( coin )
+end
+
+
+if __FILE__ == $0
+	main()
+end
 

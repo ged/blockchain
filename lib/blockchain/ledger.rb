@@ -62,6 +62,13 @@ class Blockchain::Ledger
 	end
 
 
+	### Iterate over the blocks in the ledger's blockchain.
+	def each_block( &block )
+		return self.chain.enum_for( :each ) unless block
+		return self.chain.each( &block )
+	end
+
+
 	### Add the initial block onto the chain.
 	def add_genesis_block
 		self.log.info "Adding genesis block."

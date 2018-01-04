@@ -1,6 +1,6 @@
 # Blockchain Experiments
 
-http://repo.deveiate.org/Block-Chain
+http://repo.deveiate.org/Blockchain
 
 This is just a playground for experimenting with blockchain programming. You probably shouldn't use it for anything.
 

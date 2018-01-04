@@ -29,6 +29,10 @@ hoespec = Hoe.spec 'blockchain' do |spec|
 	spec.dependency 'loggability', '~> 0.14'
 	spec.dependency 'msgpack', '~> 1.2'
 	spec.dependency 'uuid', '~> 2.3'
+	spec.dependency 'tty', '~> 0.7'
+	spec.dependency 'pastel', '~> 0.7'
+	spec.dependency 'money', '~> 6.10'
+	spec.dependency 'monetize', '~> 1.7'
 
 	spec.dependency 'rdoc', '~> 6.0', :developer
 	spec.dependency 'hoe-deveiate', '~> 0.3', :developer
