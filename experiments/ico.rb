@@ -48,12 +48,14 @@ def main
 
 	coin = Blockchain::Currency.new
 	me = coin.create_wallet
+	puts "Created wallet %s" % [ me ]
 	other = coin.create_wallet
+	puts "Created wallet %s" % [ other ]
 
-	coin.process( wallet: me )
+	coin.process( me )
 	coin.transfer( from: me, to: other, amount: 245 )
 	coin.transfer( from: other, to: me, amount: 20 )
-	coin.process( wallet: me )
+	coin.process( me )
 	show_currency_state( coin )
 end
 

@@ -30,15 +30,18 @@ end
 class Blockchain::Currency < Blockchain::Ledger
 
 	# The number of "coins" received for mining blocks
-	MINING_REWARD = 100_000
+	MINING_REWARD = 100_000_000
 
 	# The number of "coins" in the genesis block
 	INITIAL_AMOUNT = (2 ** 20) * (10 ** 9)
 
+	# The wallet that contains all unmined currency
+	GENESIS_WALLET = "0"
+
 
 	### Create a new Currency
 	def initialize
-		@wallets = Set.new
+		@wallets = Set[ "0" ]
 		@uuid = UUID.new
 
 		super
@@ -57,6 +60,7 @@ class Blockchain::Currency < Blockchain::Ledger
 	### Send the specified +amount+ of currency to the given +to+ wallet from the
 	### specified +from+ wallet.
 	def transfer( amount:, to:, from: )
+		self.log.info "%s --{%0.6f𝓩}--> %s" % [ from, amount, to ]
 		amount = normalize_amount( amount )
 
 		raise "No such wallet #{to}" unless self.wallets.include?( to )
@@ -66,14 +70,7 @@ class Blockchain::Currency < Blockchain::Ledger
 			self.wallet_has_at_least?( from, amount )
 
 		self.add_transaction( amount: amount, to: to, from: from )
-	end
-
-
-	### Returns true if the specified +wallet+ has at least +amount+ in it.
-	def wallet_has_at_least?( wallet, amount )
-		balance = self.balance_for( wallet: wallet, pending_transactions: self.current_transactions )
-		self.log.debug "Balance for wallet %s: %p" % [ wallet, balance ]
-		return balance >= amount
+		self.log.info "transfer complete."
 	end
 
 
@@ -86,9 +83,9 @@ class Blockchain::Currency < Blockchain::Ledger
 
 
 	### Mine the current block on behalf of the specified +wallet+.
-	def process( wallet: )
+	def process( wallet )
 		self.add_block do
-			self.add_transaction( from: "0", to: wallet, amount: MINING_REWARD )
+			self.add_transaction( from: GENESIS_WALLET, to: wallet, amount: MINING_REWARD )
 		end
 	end
 
@@ -102,27 +99,27 @@ class Blockchain::Currency < Blockchain::Ledger
 
 
 	### Return the balance for the specified +wallet+.
-	def balance_for( wallet:, pending_transactions: nil )
+	def balance_for( wallet, include_pending_transactions=false )
 		self.log.debug "Checking balance for wallet %s" % [ wallet ]
 
 		total = self.chain.inject( 0 ) do |sum, block|
 			self.log.debug "Summing from block %d" % [ block.index ]
 			sum + block.transactions.inject( 0 ) do |trsum, transaction|
 				change = transaction_change_for( wallet, transaction )
-				self.log.debug " txn %d: %+d" % [ change ]
+				self.log.debug " txn %p: %+d" % [ transaction, change ]
 				trsum + change
 			end
 		end
 		self.log.debug "  total from chain: %p" % [ total ]
 
-		if pending_transactions
-			total += pending_transactions.inject( 0 ) do |trsum, transaction|
+		if include_pending_transactions
+			total += self.current_transactions.inject( 0 ) do |trsum, transaction|
 				change = transaction_change_for( wallet, transaction )
 				self.log.debug " %+d" % [ change ]
 				trsum + change
 			end
+			self.log.debug "  total after pending transactions: %p" % [ total ]
 		end
-		self.log.debug "  total after pending transactions: %p" % [ total ]
 
 		return total
 	end
@@ -131,10 +128,12 @@ class Blockchain::Currency < Blockchain::Ledger
 	### Return a Hash of the balances for each wallet keyed by its ID.
 	def all_wallet_balances
 		totals = Hash.new {|h,uuid| h[uuid] = 0 }
+		totals[ GENESIS_WALLET ] = INITIAL_AMOUNT
+
 		self.each_block do |block|
 			block.transactions.each do |tr|
-				totals[ tr[:from] ] -= tr[:amount]
 				totals[ tr[:to] ]   += tr[:amount]
+				totals[ tr[:from] ] -= tr[:amount]
 			end
 		end
 
@@ -149,8 +148,16 @@ class Blockchain::Currency < Blockchain::Ledger
 
 	### Add the initial block onto the chain.
 	def add_genesis_block
-		self.add_transaction( to: '0', from: '0', amount: INITIAL_AMOUNT )
+		self.add_transaction( to: GENESIS_WALLET, from: GENESIS_WALLET, amount: INITIAL_AMOUNT )
 		super
+	end
+
+
+	### Returns true if the specified +wallet+ has at least +amount+ in it.
+	def wallet_has_at_least?( wallet, amount )
+		balance = self.balance_for( wallet, true )
+		self.log.debug "Balance for wallet %s: %p" % [ wallet, balance ]
+		return balance >= amount
 	end
 
 
@@ -161,10 +168,13 @@ class Blockchain::Currency < Blockchain::Ledger
 	### Return the amount of change to the specified +wallet+ represented by the
 	### specified +transaction+.
 	def transaction_change_for( wallet, transaction )
-		if transaction[:from] == wallet
-			return -transaction[:amount]
-		elsif transaction[:to] == wallet
+		transaction = transaction.transform_keys( &:to_sym )
+
+		self.log.debug "Checking txn %p for amount changed for %p" % [ transaction, wallet ]
+		if transaction[:to] == wallet
 			return +transaction[:amount]
+		elsif transaction[:from] == wallet
+			return -transaction[:amount]
 		else
 			0
 		end
